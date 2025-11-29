@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GamePro</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --bg: #0d0d12; --card: #1c1c24; --accent: #ff0055; --blue: #00f2ff; --gold: #ffd700; --text: #fff; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding-bottom: 80px; overflow-x: hidden; }
+        .bg-fx { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 30%, #1a1a2e 0%, #000 80%); z-index: -1; }
+
+        .premium-border { border: 1px solid var(--gold) !important; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2) !important; }
+        .header { padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-weight: 800; font-size: 20px; } .logo span { color: var(--blue); }
+        .screen { display: none; padding: 20px; animation: fade 0.3s; }
+        .screen.active { display: block; } @keyframes fade { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+        .banner-img { width: 100%; height: 160px; object-fit: cover; border-radius: 16px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .game-card { background: #1e1e24; border-radius: 16px; padding: 20px; text-align: center; border: 1px solid #333; transition: 0.2s; }
+        .game-card:active { transform: scale(0.95); border-color: var(--accent); }
+        .game-icon { font-size: 32px; margin-bottom: 10px; color: var(--gold); }
+
+        .signal-box { background: var(--card); border-radius: 20px; height: 240px; display: flex; justify-content: center; align-items: center; border: 1px solid #333; margin: 20px 0; position: relative; overflow: hidden; }
+        .val-big { font-size: 50px; font-weight: 900; color: var(--accent); text-shadow: 0 0 20px rgba(255,0,85,0.4); }
+
+        .mines-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .cell { width: 35px; height: 35px; background: rgba(255,255,255,0.05); border-radius: 6px; display: flex; justify-content: center; align-items: center; }
+        .cell.star { background: rgba(0, 242, 255, 0.2); border: 1px solid var(--blue); }
+        .cell.star i { color: var(--blue); font-size: 14px; }
+
+        .btn { background: var(--blue); border: none; color: black; padding: 16px; width: 100%; border-radius: 12px; font-weight: bold; font-size: 16px; margin-top: 10px; }
+        .btn:disabled { background: #333; color: #777; }
+        .nav { position: fixed; bottom: 0; width: 100%; background: #111; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #333; }
+        .nav-item { color: #555; font-size: 10px; text-align: center; width: 33%; }
+        .nav-item.active { color: var(--blue); }
+        .nav-item i { font-size: 22px; margin-bottom: 4px; display: block; }
+    </style>
+</head>
+<body>
+    <div class="bg-fx"></div>
+    <div id="lock-screen" style="display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:99; justify-content:center; align-items:center; flex-direction:column; text-align:center;">
+        <i class="fa-solid fa-lock" style="font-size:50px; color:var(--accent); margin-bottom:20px"></i>
+        <h2>Доступ закрито</h2><p>Пройдіть верифікацію.</p>
+    </div>
+
+    <div id="app" style="display:none">
+        <div class="header">
+            <div class="logo">GamePro<span>●</span></div>
+            <div id="status-badge" style="font-size:12px; font-weight:bold; color:#555;">FREE</div>
+        </div>
+
+        <div id="p-home" class="screen active">
+            <img id="banner" src="" class="banner-img" onerror="this.style.display='none'">
+            <h3>🔥 СТРАТЕГІЇ</h3>
+            <div id="strat-list" style="background:var(--card); padding:10px; border-radius:12px;">Wait...</div>
+        </div>
+
+        <div id="p-games" class="screen">
+            <h3>🎰 ОБЕРІТЬ ГРУ</h3>
+            <div class="grid">
+                <div class="game-card" onclick="openGame('Aviator')"><i class="fa-solid fa-plane-up game-icon" style="color:var(--accent)"></i><div>Aviator</div></div>
+                <div class="game-card" onclick="openGame('Mines')"><i class="fa-solid fa-bomb game-icon" style="color:#aaa"></i><div>Mines</div></div>
+                <div class="game-card" onclick="openGame('Olympus')"><i class="fa-solid fa-bolt game-icon" style="color:var(--blue)"></i><div>Olympus</div></div>
+                <div class="game-card" onclick="openGame('Bonanza')"><i class="fa-solid fa-candy-cane game-icon" style="color:#ff69b4"></i><div>Bonanza</div></div>
+            </div>
+        </div>
+
+        <div id="p-signal" class="screen">
+            <button onclick="nav('games')" style="background:none; border:none; color:white; margin-bottom:10px">⬅ Назад</button>
+            <h2 id="g-name" style="text-align:center; margin:0">Game</h2>
+            <div class="signal-box" id="sig-box"><span style="opacity:0.5">Ready</span></div>
+            <div style="text-align:center; margin-bottom:10px; font-size:12px; color:#888">
+                Спроби: <span id="lim" style="color:white">...</span> | Кулдаун: <span id="cd-info">60с</span>
+            </div>
+            <button id="btn-get" class="btn" onclick="getSignal()">ОТРИМАТИ СИГНАЛ</button>
+        </div>
+
+        <div id="p-profile" class="screen">
+            <div style="text-align:center; margin-bottom:20px;">
+                <div style="width:70px; height:70px; background:#333; border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-size:24px;">👤</div>
+                <h2 id="u-name">User</h2>
+                <div style="font-size:12px; color:#888">ID: <span id="u-id">...</span></div>
+            </div>
+            <div class="grid" style="margin-bottom:20px;">
+                <div style="background:#222; padding:15px; border-radius:12px; text-align:center;">
+                    <div style="font-size:20px; font-weight:bold; color:var(--gold)" id="u-bal">0 $</div>
+                    <div style="font-size:10px; color:#888">Баланс (10%)</div>
+                </div>
+                <div style="background:#222; padding:15px; border-radius:12px; text-align:center;">
+                    <div style="font-size:20px; font-weight:bold; color:white" id="u-refs">0</div>
+                    <div style="font-size:10px; color:#888">Реферали</div>
+                </div>
+            </div>
+            <div style="background:#222; padding:15px; border-radius:12px;">
+                <div style="font-size:12px; color:#888; margin-bottom:5px;">Ваше посилання:</div>
+                <div style="background:#111; padding:8px; border-radius:6px; font-family:monospace; color:var(--blue); overflow:hidden; white-space:nowrap; text-overflow:ellipsis;" id="u-link">...</div>
+            </div>
+        </div>
+
+        <div class="nav">
+            <div class="nav-item active" onclick="nav('home')" id="n-home"><i class="fa-solid fa-house"></i>Main</div>
+            <div class="nav-item" onclick="nav('games')" id="n-games"><i class="fa-solid fa-gamepad"></i>Games</div>
+            <div class="nav-item" onclick="nav('profile')" id="n-profile"><i class="fa-solid fa-user"></i>Profile</div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp; tg.expand();
+        const uid = tg.initDataUnsafe?.user?.id;
+        let isPrem = false; let cooldownTime = 60; let curGame = '';
+
+        async function init() {
+            if(!uid) return;
+            let res = await fetch(`/api/user?uid=${uid}`);
+            let data = await res.json();
+
+            if(data.access) {
+                document.getElementById('lock-screen').style.display='none';
+                document.getElementById('app').style.display='block';
+                isPrem = data.premium; cooldownTime = isPrem ? 30 : 60;
+
+                if(data.banner) document.getElementById('banner').src = data.banner;
+                document.getElementById('status-badge').innerText = isPrem ? 'PREMIUM' : 'FREE';
+                document.getElementById('cd-info').innerText = cooldownTime + 'с';
+
+                document.getElementById('u-name').innerText = tg.initDataUnsafe.user.first_name;
+                document.getElementById('u-id').innerText = uid;
+                document.getElementById('u-bal').innerText = data.balance.toFixed(2) + ' $';
+                document.getElementById('u-refs').innerText = data.refs;
+                document.getElementById('u-link').innerText = data.reflink;
+                updateLimits(data.left); loadStrat();
+            }
+        }
+        init();
+
+        function nav(s) {
+            document.querySelectorAll('.screen').forEach(e=>e.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
+            document.getElementById('p-'+s).classList.add('active');
+            document.getElementById('n-'+(s==='signal'?'games':s)).classList.add('active');
+        }
+
+        function openGame(g) { curGame=g; document.getElementById('g-name').innerText=g; nav('signal'); document.getElementById('sig-box').innerHTML='<span style="opacity:0.5">Ready</span>'; }
+
+        async function getSignal() {
+            const btn = document.getElementById('btn-get'); btn.disabled = true;
+            let res = await fetch(`/api/signal?uid=${uid}&game=${curGame}`);
+            let data = await res.json();
+
+            if(data.err === 'limit') { btn.disabled=false; return tg.showAlert("Ліміт вичерпано!"); }
+            if(data.err === 'cooldown') { btn.disabled=false; return tg.showAlert("Зачекайте..."); }
+
+            const box = document.getElementById('sig-box');
+            if(curGame === 'Aviator') box.innerHTML = `<div class="val-big">${data.val}x</div>`;
+            else if(curGame === 'Mines') {
+                let h='<div class="mines-grid">'; data.val.forEach(r=>r.forEach(c=>h+=`<div class="cell ${c?'star':''}">${c?'<i class="fa-solid fa-star"></i>':''}</div>`));
+                box.innerHTML = h+'</div>';
+            } else box.innerHTML = `<div class="val-big">${data.val}</div>`;
+
+            updateLimits(data.left);
+            let t = cooldownTime;
+            let i = setInterval(() => { btn.innerText=`⏳ ${t--}s`; if(t<0) { clearInterval(i); btn.innerText="ОТРИМАТИ СИГНАЛ"; btn.disabled=false; } }, 1000);
+        }
+
+        function updateLimits(left) { document.getElementById('lim').innerText = isPrem ? '∞' : left; }
+        async function loadStrat() {
+            let res = await fetch('/api/strat'); let data = await res.json();
+            let h=''; data.forEach(i=>h+=`<div style="display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid #333"><span>${i.bet}</span><span style="color:var(--blue)">${i.spins}</span></div>`);
+            document.getElementById('strat-list').innerHTML = h;
+        }
+    </script>
+</body>
+</html>
